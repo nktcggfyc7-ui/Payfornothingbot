@@ -173,6 +173,11 @@ class Config:
 
         bot_token = os.environ.get("PAYFORNOTHING_BOT_TOKEN", str(raw.get("bot_token", "")).strip())
         card_number = os.environ.get("PAYFORNOTHING_CARD_NUMBER", str(raw.get("card_number", "")).strip())
+        support_contact = os.environ.get("PAYFORNOTHING_SUPPORT_CONTACT", str(raw.get("support_contact", "")).strip())
+        admin_bootstrap_secret = os.environ.get(
+            "PAYFORNOTHING_ADMIN_SECRET",
+            str(raw.get("admin_bootstrap_secret", "")).strip(),
+        )
         if not bot_token:
             raise ValueError("Не заполнен bot_token в config.json или PAYFORNOTHING_BOT_TOKEN.")
         if not card_number:
@@ -231,7 +236,7 @@ class Config:
             bot_username=str(raw.get("bot_username", "")).strip(),
             card_number=card_number,
             card_holder=str(raw.get("card_holder", "")).strip(),
-            support_contact=str(raw.get("support_contact", "")).strip(),
+            support_contact=support_contact,
             support_text=str(
                 raw.get(
                     "support_text",
@@ -240,7 +245,7 @@ class Config:
             ).strip(),
             timezone=str(raw.get("timezone", "Europe/Moscow")).strip() or "Europe/Moscow",
             admin_ids={int(item) for item in raw.get("admin_ids", [])},
-            admin_bootstrap_secret=str(raw.get("admin_bootstrap_secret", "")).strip(),
+            admin_bootstrap_secret=admin_bootstrap_secret,
             stats_broadcast_hours=max(1, int(raw.get("stats_broadcast_hours", 24))),
             plans=plans,
         )
