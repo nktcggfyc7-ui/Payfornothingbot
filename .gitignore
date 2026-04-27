@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+bot.log
+data/*.db
+data/test-artifacts/
+dist/
