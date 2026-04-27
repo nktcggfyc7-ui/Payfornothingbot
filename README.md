@@ -91,6 +91,8 @@
 
 - `PAYFORNOTHING_BOT_TOKEN`
 - `PAYFORNOTHING_CARD_NUMBER`
+- `PAYFORNOTHING_ADMIN_SECRET`
+- `PAYFORNOTHING_SUPPORT_CONTACT`
 
 Это удобно для сервера и безопаснее, чем хранить секреты в GitHub.
 
@@ -156,6 +158,7 @@ py -m unittest discover -s tests -v
 6. В переменных окружения Koyeb задать:
    - `PAYFORNOTHING_BOT_TOKEN`
    - `PAYFORNOTHING_CARD_NUMBER`
+   - `PAYFORNOTHING_ADMIN_SECRET`
 7. Убедиться, что переменные и конфиг корректны.
 8. Запустить деплой.
 
