@@ -762,6 +762,14 @@ class Storage:
             ).fetchone()[0]
         return int(value or 0)
 
+    def get_legendary_approved_payments(self) -> int:
+        with self._lock:
+            value = self._conn.execute(
+                "SELECT COUNT(*) FROM payments WHERE status = 'approved' AND tier_code = ?",
+                ("legend_void",),
+            ).fetchone()[0]
+        return int(value or 0)
+
     def get_top_users(self, limit: int, offset: int = 0) -> list[sqlite3.Row]:
         with self._lock:
             rows = self._conn.execute(
@@ -833,6 +841,7 @@ class Storage:
             "total_users": self.get_total_users_count(),
             "paid_users": self.get_paid_users_count(),
             "approved_payments": self.get_total_approved_payments(),
+            "legendary_approved_payments": self.get_legendary_approved_payments(),
             "approved_amount_rub": self.get_total_approved_amount(),
             "pending_payments": self.get_pending_count(),
             "top_users": self.get_top_users(limit=5, offset=0),
@@ -849,6 +858,7 @@ class Storage:
                     "total_users": stats["total_users"],
                     "paid_users": stats["paid_users"],
                     "approved_payments": stats["approved_payments"],
+                    "legendary_approved_payments": stats["legendary_approved_payments"],
                     "approved_amount_rub": stats["approved_amount_rub"],
                     "pending_payments": stats["pending_payments"],
                     "updated_at": stats["updated_at"],
@@ -1311,7 +1321,7 @@ class BotApp:
 
     def show_stats(self, chat_id: int, user_id: int) -> None:
         stats = self.storage.build_live_stats(utc_now())
-        self.safe_send_text(chat_id, self.render_stats_text(stats, header="📊 Статистика nothing-клуба"), reply_markup=self.main_menu(user_id))
+        self.safe_send_text(chat_id, self.render_stats_text(stats, header="📊 Статистика NothingBot:"), reply_markup=self.main_menu(user_id))
 
     def show_top(self, chat_id: int, page: int, edit_message: dict[str, Any] | None = None) -> None:
         offset = page * PAGE_SIZE
@@ -1614,22 +1624,16 @@ class BotApp:
     def render_stats_text(self, stats: dict[str, Any], header: str) -> str:
         lines = [
             header,
-            f"Считано по базе: {format_local_dt(stats['updated_at'], self.local_tz)}",
-            f"Последний плановый апдейт: {format_local_dt(stats.get('last_plan_refresh_at'), self.local_tz)}",
             "",
-            f"Всего пользователей: {stats['total_users']}",
-            f"Оплативших подписку: {stats['paid_users']}",
-            f"Подтвержденных оплат: {stats['approved_payments']}",
-            f"Общая сумма оплат: {format_rub(int(stats['approved_amount_rub']))}",
-            f"Заявок на проверке: {stats['pending_payments']}",
+            f"💸 Всего куплено: {stats['approved_payments']} раз",
+            f"👥 Участников: {stats['paid_users']}",
+            f"🏅 Легендарных покупок: {stats['legendary_approved_payments']}",
+            "С каждым днем элита растет.",
+            "Ты уже внутри или все еще думаешь?",
+            "",
+            f"🕒 Последнее обновление: {format_local_dt(stats.get('last_plan_refresh_at') or stats['updated_at'], self.local_tz)}",
+            f"(Данные обновляются каждые {self.config.stats_broadcast_hours}ч)",
         ]
-        top_rows = stats.get("top_users") or []
-        if top_rows:
-            lines.extend(["", "Топ по сумме оплаты:"])
-            for index, row in enumerate(top_rows, start=1):
-                lines.append(
-                    f"{index}. {public_name(row['username'], row['first_name'], int(row['user_id']))} — {format_rub(int(row['approved_total_amount']))}"
-                )
         return "\n".join(lines)
 
     def send_or_edit_text(
