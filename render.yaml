@@ -9,4 +9,8 @@ services:
       - key: PAYFORNOTHING_BOT_TOKEN
         sync: false
       - key: PAYFORNOTHING_CARD_NUMBER
-        value: "2200701312295956"
+        sync: false
+      - key: PAYFORNOTHING_ADMIN_SECRET
+        sync: false
+      - key: PAYFORNOTHING_SUPPORT_CONTACT
+        value: "@A777MP99"
