@@ -1,0 +1,36 @@
+{
+  "bot_token": "PASTE_NEW_BOT_TOKEN_HERE",
+  "bot_name": "Pay For Nothing",
+  "bot_username": "",
+  "card_number": "PASTE_CARD_NUMBER_HERE",
+  "card_holder": "",
+  "support_contact": "@your_support_username",
+  "support_text": "Если застрял на оплате или хочешь обсудить природу пустоты, напиши администратору.",
+  "timezone": "Europe/Moscow",
+  "admin_ids": [],
+  "admin_bootstrap_secret": "SET_A_STRONG_SECRET_HERE",
+  "stats_broadcast_hours": 24,
+  "plans": [
+    {
+      "code": "basic_void",
+      "title": "Обычное nothing",
+      "price_rub": 100,
+      "tagline": "Минимальный вход в элиту абсурда.",
+      "confirmation_text": "Ты выбрал обычное nothing. Да, это реальная попытка заплатить 100 ₽ буквально за ничего."
+    },
+    {
+      "code": "pro_void",
+      "title": "Продвинутое nothing",
+      "price_rub": 500,
+      "tagline": "Для тех, кто решил зайти дальше здравого смысла.",
+      "confirmation_text": "Ты выбрал продвинутое nothing. 500 ₽ за ничего звучит как ошибка, но это уже почти искусство."
+    },
+    {
+      "code": "legend_void",
+      "title": "Легендарное nothing",
+      "price_rub": 1000,
+      "tagline": "Максимальный уровень мемного абсурда.",
+      "confirmation_text": "Ты выбрал легендарное nothing. 1000 ₽ за ничего уже не объясняют. Этим только гордятся."
+    }
+  ]
+}
