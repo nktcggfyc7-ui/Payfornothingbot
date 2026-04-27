@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: payfornothingbot
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: PAYFORNOTHING_BOT_TOKEN
+        sync: false
+      - key: PAYFORNOTHING_CARD_NUMBER
+        value: "2200701312295956"
