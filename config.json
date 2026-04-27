@@ -2,13 +2,13 @@
   "bot_token": "",
   "bot_name": "Pay For Nothing",
   "bot_username": "Payfornothinggbot",
-  "card_number": "2200701312295956",
+  "card_number": "",
   "card_holder": "",
   "support_contact": "@A777MP99",
   "support_text": "Если застрял на оплате или хочешь обсудить природу пустоты, напиши администратору.",
   "timezone": "Europe/Moscow",
   "admin_ids": [],
-  "admin_bootstrap_secret": "payfornothing-admin-20260426",
+  "admin_bootstrap_secret": "",
   "stats_broadcast_hours": 24,
   "plans": [
     {
