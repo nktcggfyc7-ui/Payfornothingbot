@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -293,6 +294,20 @@ class TelegramClient:
 
     def delete_webhook(self) -> None:
         self._request("deleteWebhook", {"drop_pending_updates": False})
+
+    def set_webhook(
+        self,
+        url: str,
+        allowed_updates: list[str] | None = None,
+        drop_pending_updates: bool = False,
+    ) -> None:
+        payload: dict[str, Any] = {
+            "url": url,
+            "drop_pending_updates": drop_pending_updates,
+        }
+        if allowed_updates:
+            payload["allowed_updates"] = allowed_updates
+        self._request("setWebhook", payload)
 
     def get_me(self) -> dict[str, Any]:
         return self._request("getMe", {})
@@ -885,10 +900,21 @@ class BotApp:
         self.bot_username = config.bot_username.lstrip("@")
         self.health_server: ThreadingHTTPServer | None = None
         self.health_thread: threading.Thread | None = None
+        self.webhook_path = f"/telegram/{hashlib.sha256(config.bot_token.encode('utf-8')).hexdigest()[:24]}"
 
     def run(self) -> None:
         self.start_health_server()
-        self.api.delete_webhook()
+        webhook_url = self.get_webhook_url()
+        if webhook_url:
+            self.api.set_webhook(
+                webhook_url,
+                allowed_updates=["message", "callback_query"],
+                drop_pending_updates=False,
+            )
+            logging.info("Webhook mode enabled: %s", webhook_url)
+        else:
+            self.api.delete_webhook()
+            logging.info("Webhook mode disabled, using long polling.")
         try:
             me = self.api.get_me()
             username = str(me.get("username", "")).strip()
@@ -899,6 +925,11 @@ class BotApp:
 
         self.refresh_stats(force=False, notify_admins=False)
         self.scheduler.start()
+
+        if webhook_url:
+            while not self.stop_event.wait(1):
+                pass
+            return
 
         offset: int | None = None
         backoff = 2
@@ -916,6 +947,15 @@ class BotApp:
                 logging.exception("Ошибка polling loop")
                 time.sleep(backoff)
                 backoff = min(backoff * 2, 30)
+
+    def get_webhook_url(self) -> str:
+        base_url = (
+            os.environ.get("PAYFORNOTHING_WEBHOOK_BASE_URL", "").strip()
+            or os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+        )
+        if not base_url:
+            return ""
+        return f"{base_url.rstrip('/')}{self.webhook_path}"
 
     def start_health_server(self) -> None:
         host = "0.0.0.0"
@@ -946,6 +986,37 @@ class BotApp:
                     "stopping": app.stop_event.is_set(),
                 }
                 self.wfile.write(json.dumps(payload, ensure_ascii=False).encode("utf-8"))
+
+            def do_POST(self) -> None:
+                if self.path != app.webhook_path:
+                    self.send_response(HTTPStatus.NOT_FOUND)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(b"not found")
+                    return
+
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                except ValueError:
+                    length = 0
+
+                raw = self.rfile.read(length) if length > 0 else b""
+                try:
+                    update = json.loads(raw.decode("utf-8")) if raw else {}
+                    if update:
+                        app.handle_update(update)
+                except Exception:
+                    logging.exception("Webhook update processing failed")
+                    self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+                    self.send_header("Content-Type", "application/json; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(b'{"ok": false}')
+                    return
+
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b'{"ok": true}')
 
             def log_message(self, format: str, *args: Any) -> None:
                 return
