@@ -8,6 +8,7 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import queue
 import sqlite3
 import threading
 import time
@@ -901,9 +902,13 @@ class BotApp:
         self.health_server: ThreadingHTTPServer | None = None
         self.health_thread: threading.Thread | None = None
         self.webhook_path = f"/telegram/{hashlib.sha256(config.bot_token.encode('utf-8')).hexdigest()[:24]}"
+        self.update_queue: queue.Queue[dict[str, Any]] = queue.Queue()
+        self.update_worker = threading.Thread(target=self._update_worker_loop, name="update-worker", daemon=True)
 
     def run(self) -> None:
         self.start_health_server()
+        if not self.update_worker.is_alive():
+            self.update_worker.start()
         webhook_url = self.get_webhook_url()
         if webhook_url:
             self.api.set_webhook(
@@ -939,7 +944,7 @@ class BotApp:
                 backoff = 2
                 for update in updates:
                     offset = int(update["update_id"]) + 1
-                    self.handle_update(update)
+                    self.submit_update(update)
             except KeyboardInterrupt:
                 self.stop_event.set()
                 raise
@@ -956,6 +961,23 @@ class BotApp:
         if not base_url:
             return ""
         return f"{base_url.rstrip('/')}{self.webhook_path}"
+
+    def submit_update(self, update: dict[str, Any]) -> None:
+        self.update_queue.put(update)
+
+    def _update_worker_loop(self) -> None:
+        while not self.stop_event.is_set():
+            try:
+                update = self.update_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            try:
+                self.handle_update(update)
+            except Exception:
+                logging.exception("Update processing failed")
+            finally:
+                self.update_queue.task_done()
 
     def start_health_server(self) -> None:
         host = "0.0.0.0"
@@ -1004,7 +1026,7 @@ class BotApp:
                 try:
                     update = json.loads(raw.decode("utf-8")) if raw else {}
                     if update:
-                        app.handle_update(update)
+                        app.submit_update(update)
                 except Exception:
                     logging.exception("Webhook update processing failed")
                     self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
